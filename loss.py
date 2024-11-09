@@ -2,19 +2,17 @@ import torch
 import torch.nn as nn
 
 
-def kkt_loss_function(x, lambda_, w, f_x, A, b, eta=10):
+def kkt_loss_function(x, lambda_, w, f_x, A, b):
     """
     论文中描述的基于KKT条件的损失函数的PyTorch实现。
 
     参数：
-        x (torch.Tensor): 原始神经网络的输出，大小为 [batch_size, num_variables]。
-        lambda_ (torch.Tensor): 对偶神经网络的输出，大小为 [batch_size, num_constraints]。
-        w (torch.Tensor): 标量化权重向量，大小为 [batch_size, num_objectives]。
-        f_x (function): 接收 x 并返回目标值的函数，大小为 [batch_size, num_objectives]。
-        A (torch.Tensor): 表示线性约束的矩阵，大小为 [num_constraints, num_variables]。
-        b (torch.Tensor): 表示线性约束边界的向量，大小为 [num_constraints]。
-        eta (float, optional): 互补松弛部分损失的权重因子。默认值为 10。
-
+        - x (torch.Tensor): 原始神经网络的输出，大小为 [batch_size, num_variables]。
+        - lambda_ (torch.Tensor): 对偶神经网络的输出，大小为 [batch_size, num_constraints]。
+        - w (torch.Tensor): 标量化权重向量，大小为 [batch_size, num_objectives]。
+        - f_x (function): 接收 x 并返回目标值的函数，大小为 [batch_size, num_objectives]。
+        - A (torch.Tensor): 表示线性约束的矩阵，大小为 [num_constraints, num_variables]。
+        - b (torch.Tensor): 表示线性约束边界的向量，大小为 [num_constraints]。
     返回：
         torch.Tensor: 计算的KKT损失值。
     """

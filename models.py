@@ -10,16 +10,16 @@ class PrimalNet(nn.Module):
     输出：近似的决策变量 x* ∈ R^N
     """
 
-    def __init__(self, input_dim, hidden_dim, output_dim, x_bar, A, b):
+    def __init__(self, input_dim, hidden_dim, output_dim, x_bar, A, b, device):
         super(PrimalNet, self).__init__()
 
         # 定义三层隐藏层，每层包含 hidden_dim 个神经元
-        self.layer1 = nn.Linear(input_dim, hidden_dim)
-        self.layer2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer3 = nn.Linear(hidden_dim, hidden_dim)
+        self.layer1 = nn.Linear(input_dim, hidden_dim, device=device)
+        self.layer2 = nn.Linear(hidden_dim, hidden_dim, device=device)
+        self.layer3 = nn.Linear(hidden_dim, hidden_dim, device=device)
 
         # 输出层，输出维度为决策变量的维度 N
-        self.output_layer = nn.Linear(hidden_dim, output_dim)
+        self.output_layer = nn.Linear(hidden_dim, output_dim, device=device)
         self.FeasibleOutputLayer = FeasibleOutputLayer(x_bar, A, b)
 
     def forward(self, w):
@@ -44,16 +44,16 @@ class DualNet(nn.Module):
     输出：拉格朗日乘子 λ ∈ R^M
     """
 
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim, device):
         super(DualNet, self).__init__()
 
         # 定义三层隐藏层，每层包含 hidden_dim 个神经元
-        self.layer1 = nn.Linear(input_dim, hidden_dim)
-        self.layer2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer3 = nn.Linear(hidden_dim, hidden_dim)
+        self.layer1 = nn.Linear(input_dim, hidden_dim, device=device)
+        self.layer2 = nn.Linear(hidden_dim, hidden_dim, device=device)
+        self.layer3 = nn.Linear(hidden_dim, hidden_dim, device=device)
 
         # 输出层，输出维度为对偶变量的维度 M
-        self.output_layer = nn.Linear(hidden_dim, output_dim)
+        self.output_layer = nn.Linear(hidden_dim, output_dim, device=device)
 
     def forward(self, w):
         """

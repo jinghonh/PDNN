@@ -34,8 +34,8 @@ def kkt_loss_function(x, lambda_, w, f_x, A, b):
     # 一阶条件 (4)：J_f(x)^T * w + J_g(x)^T * lambda = 0
     # 调整w的形状以确保矩阵乘法的兼容性
     w = w.unsqueeze(-1)  # [batch_size, num_objectives, 1]
-    kkt_first_order = torch.bmm(J_f.transpose(1, 2), w).squeeze(-1) + torch.bmm(J_g.transpose(1, 2),
-                                                                                lambda_.unsqueeze(-1)).squeeze(-1)
+    kkt_first_order = (torch.bmm(J_f.transpose(1, 2), w).squeeze(-1) +
+                       torch.bmm(J_g.transpose(1, 2), lambda_.unsqueeze(-1)).squeeze(-1))
     kkt_first_order_loss = torch.norm(kkt_first_order, p=2, dim=1) ** 2
 
     # 互补松弛条件 (7)：lambda_i * g_i(x) = 0，且 g_i(x) <= 0
@@ -48,33 +48,3 @@ def kkt_loss_function(x, lambda_, w, f_x, A, b):
     total_loss = torch.mean(kkt_first_order_loss + eta * complementary_slackness_loss)
 
     return total_loss
-
-
-# 示例数据的使用
-batch_size = 10
-num_variables = 5
-num_objectives = 2
-num_constraints = 3
-
-# 示例输入张量
-x = torch.randn(batch_size, num_variables, requires_grad=True)
-lambda_ = torch.abs(torch.randn(batch_size, num_constraints, requires_grad=True))  # Lambda 应该是非负的
-w = torch.randn(batch_size, num_objectives)
-A = torch.randn(num_constraints, num_variables)
-b = torch.randn(num_constraints)
-
-
-# 示例目标函数
-def f_x(x):
-    """
-    示例目标函数 f(x)
-    假设有两个目标函数 f1 和 f2
-    """
-    f1 = x[:, 0]**2 + x[:, 1]**2
-    f2 = x[:, 2] * x[:, 3] * x[:, 4]
-    return torch.stack((f1, f2), dim=1)
-
-
-# 计算损失
-loss = kkt_loss_function(x, lambda_, w, f_x, A, b)
-print("Loss value:", loss.item())

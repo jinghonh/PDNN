@@ -9,7 +9,8 @@ class Problem:
         self.N = N
 
     def problem1(self):
-        def f_x(x):
+        def f_x(x: torch.Tensor):
+
             f1 = torch.norm(x, p=2, dim=1) ** 2 / self.N
             f2 = torch.norm(x - 2, p=2, dim=1) ** 2 / self.N
             return torch.stack((f1, f2), dim=1)

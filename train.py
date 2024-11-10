@@ -4,9 +4,10 @@ from torch.optim import Adam
 from dataset import generate_data
 from models import PrimalNet, DualNet
 from loss import kkt_loss_function
+from tqdm import tqdm
 
 
-def train_model(config, f_x, A, b, x_bar, w):
+def train_model(config, f_x, A, b, x_bar, w, w_test):
     input_dim = f_x(x_bar).shape[1]
     primal_output_dim = A.shape[1]
     dual_output_dim = A.shape[0]
@@ -28,32 +29,44 @@ def train_model(config, f_x, A, b, x_bar, w):
     )
     dual_net = DualNet(
         input_dim=input_dim,
-        hidden_dim=config['hidden_dim']*2,
+        hidden_dim=config['hidden_dim'] * 2,
         output_dim=dual_output_dim,
         device=config['device']
     )
 
     # 定义优化器
     optimizer = Adam(list(primal_net.parameters()) + list(dual_net.parameters()), lr=config['learning_rate'])
+    train_loader = generate_data(w)
+    test_loader = generate_data(w_test)
     # 训练循环
-    for epoch in range(config['epochs']):
-        total_loss = 0
-        # for w in train_loader:
+    # 创建带进度条的 epoch 循环
+    with tqdm(total=config['epochs'], desc="Training Progress") as pbar:
+        for epoch in range(config['epochs']):
+            total_loss = 0
+            # 训练模式
+            primal_net.train()
+            dual_net.train()
 
-        # 前向传播
-        primal_output = primal_net(w)
-        dual_output = dual_net(w)
+            for w, in train_loader:  # 假设 train_loader 提供权重向量 w
 
-        # 计算损失
-        loss = kkt_loss_function(primal_output, dual_output, w, f_x, A, b)  # x, lambda_, w, f_x, A, b
+                # 前向传播
+                primal_output = primal_net(w)
+                dual_output = dual_net(w)
 
-        # 反向传播和优化
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+                # 计算损失
+                loss = kkt_loss_function(primal_output, dual_output, w, f_x, A, b)
 
-        total_loss += loss.item()
+                # 反向传播和优化
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-        print(f"Epoch {epoch + 1}/{config['epochs']}, Loss: {total_loss:.4f}")
+                # 累加损失
+                total_loss += loss.item()
+
+            # 更新进度条信息
+            pbar.set_postfix(loss=f"{total_loss:.4f}")
+            pbar.update(1)
+
     torch.save(primal_net.state_dict(), 'primal_net.pth')
     torch.save(dual_net.state_dict(), 'dual_net.pth')

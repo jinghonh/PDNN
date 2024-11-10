@@ -80,7 +80,8 @@ class FeasibleOutputLayer(nn.Module):
         self.A = A  # size: M x N
         self.b = b  # size: 1 x M
         self.g_x_bar = self.g(x_bar, A, b)  # size: 1 x M
-        self.e = torch.min(torch.abs(self.g_x_bar)) / 2
+        # self.e = torch.min(torch.abs(self.g_x_bar)) / 2
+        self.e = 5e-5
 
     def forward(self, z):
         """
@@ -98,10 +99,10 @@ class FeasibleOutputLayer(nn.Module):
         with torch.no_grad():
             t_values = (g_z + self.e) / (g_z - self.g_x_bar + 1e-8)  # 避免除以零
             t_values[g_z < self.e] = 0  # 只对违反约束的项计算
-            t_star = torch.max(t_values).clamp(min=0, max=1)  # 确保 t* 在 [0, 1] 范围内
+            t_star = torch.max(t_values, dim=1)  # 确保 t* 在 [0, 1] 范围内
 
         # 根据公式 (9) 计算最终的可行解 x(w)
-        x_w = (1 - t_star) * z + t_star * self.x_bar
+        x_w = (1 - t_star[0]).unsqueeze(-1) * z + t_star[0].unsqueeze(-1) * self.x_bar
         return x_w  # size: B x N
 
     def g(self, x, A, b):

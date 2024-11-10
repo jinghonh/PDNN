@@ -1,11 +1,16 @@
 import matplotlib.pyplot as plt
 import torch
-def plot_frontier(primal_net, test_loader):
-    for w, _ in test_loader:
-        with torch.no_grad():
-            predictions = primal_net(w)
-            plt.scatter(predictions[:, 0], predictions[:, 1])
+
+
+def plot_primal_net_frontier(f,x):
+    fx = f(x)
+    fx = fx.detach().numpy()
+    plt.scatter(fx[:, 0], fx[:, 1])
     plt.xlabel("Objective 1")
     plt.ylabel("Objective 2")
     plt.title("Approximated Weakly Efficient Frontier")
     plt.show()
+
+
+def plot_dual_net_frontier(primal_net, test_loader, f):
+    pass

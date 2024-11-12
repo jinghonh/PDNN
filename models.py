@@ -6,12 +6,14 @@ import torch.nn.functional as F
 class PrimalNet(nn.Module):
     """
     原问题（Primal）神经网络，用于逼近优化问题的弱有效解。
-    输入：标量化权重向量 w ∈ R^P
+    输入：标量化权重向量 weight ∈ R^P
     输出：近似的决策变量 x* ∈ R^N
     """
 
-    def __init__(self, input_dim, hidden_dim, output_dim, x_bar, A, b, device):
+    def __init__(self, input_dim, hidden_dim, problem_config, device):
         super(PrimalNet, self).__init__()
+
+        output_dim = problem_config['primal_output_dim']
 
         # 定义三层隐藏层，每层包含 hidden_dim 个神经元
         self.layer1 = nn.Linear(input_dim, hidden_dim, device=device)
@@ -20,7 +22,7 @@ class PrimalNet(nn.Module):
 
         # 输出层，输出维度为决策变量的维度 N
         self.output_layer = nn.Linear(hidden_dim, output_dim, device=device)
-        self.FeasibleOutputLayer = FeasibleOutputLayer(x_bar, A, b)
+        self.FeasibleOutputLayer = FeasibleOutputLayer(problem_config)
 
     def forward(self, w):
         """
@@ -40,7 +42,7 @@ class PrimalNet(nn.Module):
 class DualNet(nn.Module):
     """
     对偶问题（Dual）神经网络，用于估计拉格朗日乘子 λ*
-    输入：标量化权重向量 w ∈ R^P
+    输入：标量化权重向量 weight ∈ R^P
     输出：拉格朗日乘子 λ ∈ R^M
     """
 
@@ -71,16 +73,15 @@ class DualNet(nn.Module):
 
 class FeasibleOutputLayer(nn.Module):
     """
-    实现公式 (9) 和 (10) 的自定义激活函数，以确保输出的解 x(w) 是可行的。
+    实现公式 (9) 和 (10) 的自定义激活函数，以确保输出的解 x(weight) 是可行的。
     """
 
-    def __init__(self, x_bar, A, b):
+    def __init__(self, problem_config):
+        x_bar = problem_config['x_bar']
+        self.g_x = problem_config['g_x']
         super(FeasibleOutputLayer, self).__init__()
         self.x_bar = x_bar
-        self.A = A  # size: M x N
-        self.b = b  # size: 1 x M
-        self.g_x_bar = self.g(x_bar, A, b)  # size: 1 x M
-        # self.e = torch.min(torch.abs(self.g_x_bar)) / 2
+        self.g_x_bar = self.g_x(x_bar)  # size: 1 x M
         self.e = 5e-5
 
     def forward(self, z):
@@ -89,11 +90,11 @@ class FeasibleOutputLayer(nn.Module):
         x_bar: 参考点（可行解）
         g_funcs: 约束函数列表
 
-        返回：调整后的可行解 x(w)
+        返回：调整后的可行解 x(weight)
         """
 
         # 计算所有约束函数 g_j(z)
-        g_z = self.g(z, self.A, self.b)  # size: B x M
+        g_z = self.g_x(z)  # size: B x M
 
         # 计算 t*(z) 的值
         with torch.no_grad():
@@ -101,9 +102,6 @@ class FeasibleOutputLayer(nn.Module):
             t_values[g_z < self.e] = 0  # 只对违反约束的项计算
             t_star = torch.max(t_values, dim=1)  # 确保 t* 在 [0, 1] 范围内
 
-        # 根据公式 (9) 计算最终的可行解 x(w)
+        # 根据公式 (9) 计算最终的可行解 x(weight)
         x_w = (1 - t_star[0]).unsqueeze(-1) * z + t_star[0].unsqueeze(-1) * self.x_bar
         return x_w  # size: B x N
-
-    def g(self, x, A, b):
-        return torch.mm(A, x.T).T - b

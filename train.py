@@ -7,39 +7,30 @@ from loss import kkt_loss_function
 from tqdm import tqdm
 
 
-def train_model(config, f_x, A, b, x_bar, w, w_test):
-    input_dim = f_x(x_bar).shape[1]
-    primal_output_dim = A.shape[1]
-    dual_output_dim = A.shape[0]
-    # 加载数据
-    A = A.to(config['device'])
-    b = b.to(config['device'])
-    x_bar = x_bar.to(config['device'])
-    w = w.to(config['device'])
+def train_model(config, problem_config):
+
+    w = problem_config['w_train']
+    input_dim = problem_config['input_dim']
 
     # 初始化模型
     primal_net = PrimalNet(
         input_dim=input_dim,
         hidden_dim=config['primal_hidden_dim'],
-        output_dim=primal_output_dim,
-        x_bar=x_bar,
-        A=A,
-        b=b,
+        problem_config=problem_config,
         device=config['device']
     )
     dual_net = DualNet(
         input_dim=input_dim,
         hidden_dim=config['dual_hidden_dim'],
-        output_dim=dual_output_dim,
+        output_dim=problem_config['dual_output_dim'],
         device=config['device']
     )
 
     # 定义优化器
     optimizer = Adam(list(primal_net.parameters()) + list(dual_net.parameters()), lr=config['learning_rate'])
     train_loader = generate_data(w)
-    test_loader = generate_data(w_test)
+
     # 训练循环
-    # 创建带进度条的 epoch 循环
     with tqdm(total=config['epochs'], desc="Training Progress") as pbar:
         for epoch in range(config['epochs']):
             total_loss = 0
@@ -47,14 +38,14 @@ def train_model(config, f_x, A, b, x_bar, w, w_test):
             primal_net.train()
             dual_net.train()
 
-            for w, in train_loader:  # 假设 train_loader 提供权重向量 w
+            for w, in train_loader:  # 假设 train_loader 提供权重向量 weight
 
                 # 前向传播
                 primal_output = primal_net(w)
                 dual_output = dual_net(w)
 
                 # 计算损失
-                loss = kkt_loss_function(primal_output, dual_output, w, f_x, A, b)
+                loss = kkt_loss_function(primal_output, dual_output, w, problem_config)
 
                 # 反向传播和优化
                 optimizer.zero_grad()

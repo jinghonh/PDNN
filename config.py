@@ -10,3 +10,4 @@ def get_config():
         'epochs': 1000,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu'
     }
+

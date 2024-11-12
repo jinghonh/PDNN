@@ -6,31 +6,24 @@ from tqdm import tqdm
 import numpy as np
 
 
-def test_model(config, f_x, A, b, x_bar, w_test):
+def test_model(config, problem_config):
+    w_test = problem_config['w_test']
+
     # 加载模型
-    input_dim = f_x(x_bar).shape[1]
-    primal_output_dim = A.shape[1]
-    dual_output_dim = A.shape[0]
-    # 将数据移至设备上
-    A = A.to(config['device'])
-    b = b.to(config['device'])
-    x_bar = x_bar.to(config['device'])
-    w_test = w_test.to(config['device'])
+    input_dim = problem_config['input_dim']
 
     # 初始化模型并加载已训练好的权重
     primal_net = PrimalNet(
         input_dim=input_dim,
         hidden_dim=config['primal_hidden_dim'],
-        output_dim=primal_output_dim,
-        x_bar=x_bar,
-        A=A,
-        b=b,
+        problem_config=problem_config,
         device=config['device']
     )
+
     dual_net = DualNet(
         input_dim=input_dim,
         hidden_dim=config['dual_hidden_dim'],
-        output_dim=dual_output_dim,
+        output_dim=problem_config['dual_output_dim'],
         device=config['device']
     )
 
@@ -59,7 +52,7 @@ def test_model(config, f_x, A, b, x_bar, w_test):
             dual_output = dual_net(w)
 
             # 计算损失
-            loss = kkt_loss_function(primal_output, dual_output, w, f_x, A, b)
+            loss = kkt_loss_function(primal_output, dual_output, w, problem_config)
 
             # 累加损失
             total_loss += loss.item()

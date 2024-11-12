@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from config import *
 
 N = 40
 
@@ -29,7 +30,10 @@ def compute_gx(A):
 
 class Problem:
     def __init__(self, N=50):
+        self.D1 = None
+        self.D2 = None
         self.N = N
+        self.config = get_config()
 
     def problem1(self):
         def f_x(x: torch.Tensor):
@@ -38,9 +42,9 @@ class Problem:
             return torch.stack((f1, f2), dim=1)
 
         # 定义对偶函数 d_lambda
-        def recover_x(lambda_var, w):
+        def d_x(lambda_var, w):
             # lambda_var: 形状为 (2N, B)，对偶变量
-            # w: 权重向量，形状为 (2,)
+            # weight: 权重向量，形状为 (2,)
             lambda_var = lambda_var.T
             N, B = lambda_var.shape[0] // 2, lambda_var.shape[1]
 
@@ -51,25 +55,90 @@ class Problem:
             A_T_lambda = A_T @ lambda_var  # 形状: (N, B)
 
             # 计算 x^*
-            x_star = 2 * w[:,1] * torch.ones(N, B) - (N / 2) * A_T_lambda
+            x_star = 2 * w[:, 1] * torch.ones(N, B) - (N / 2) * A_T_lambda
 
             # 由于 x^* 可能不满足约束 [0, 1]，需要将其截断到 [0, 1] 范围内
             x_star = torch.clamp(x_star, min=0, max=1)
 
             return f_x(x_star)  # 形状: (N, B)
 
-        A = torch.cat((torch.eye(self.N), -torch.eye(self.N)), dim=1).T
+        A = torch.cat((torch.eye(self.N), -torch.eye(self.N)), dim=1).T.to(self.config['device'])
 
-        b = torch.cat((torch.ones(1, self.N), torch.zeros(1, self.N)), dim=1)
+        b = torch.cat((torch.ones(1, self.N), torch.zeros(1, self.N)), dim=1).to(self.config['device'])
+
+        def g_x(x, A=A, b=b):
+            return torch.mm(A, x.T).T - b
 
         w_train = torch.tensor([[0, 1],
                                 [1 / 3, 2 / 3],
                                 [2 / 3, 1 / 3],
                                 [1, 0]], dtype=torch.float)
-
+        n = 50
         w_test = torch.tensor([
-            [i / 1000, 1 - i / 1000] for i in range(1001)
+            [i / n, 1 - i / n] for i in range(n + 1)
         ], dtype=torch.float32)
         x_bar = 0.5 * torch.ones(1, self.N, dtype=torch.float)
+        n = 1000
+        w_true = torch.tensor([
+            [i / n, 1 - i / n] for i in range(n + 1)
+        ], dtype=torch.float32)
+        # if w2>0.5,x=1, else x = 2*[w2,w2]
+        x_true = torch.tensor([
+            [1, 1] if w2 > 0.5 else [2 * w2, 2 * w2] for w2 in w_true[:, 1]
+        ], dtype=torch.float32)
 
-        return f_x, recover_x, A, b, w_train, w_test, x_bar
+        f_true = f_x(x_true)
+        # f_x, recover_x, A, b, w_train, w_test, x_bar
+        return {
+            'f_x': f_x,
+            'd_x': d_x,
+            'g_x': g_x,
+            'A': A.to(self.config['device']),
+            'b': b.to(self.config['device']),
+            'w_train': w_train.to(self.config['device']),
+            'w_test': w_test.to(self.config['device']),
+            'x_bar': x_bar.to(self.config['device']),
+            'w_true': w_true.to(self.config['device']),
+            'f_true': f_true.to(self.config['device']),
+            'primal_output_dim': self.N,
+            'dual_output_dim': 2 * self.N,
+            'input_dim': 2
+        }
+
+    def problem2(self):
+        N = self.N
+        t_0 = 0
+        t_f = 2
+        u_num = 2
+        h = (t_f - t_0) / N
+        x_init = [0, 0]
+        A = [[0, 1], [-2, -3]]
+        B = [[1, 0], [0, 1]]
+        D1 = []
+        D2 = []
+        for u_i in range(u_num):
+            for u_t in range(0, N):
+                u_value = [[0] * u_num for i in range(N)]
+                u_value[u_t][u_i] = 1
+                x = [x_init] + [[0, 0] for i in range(N)]
+                for t in range(1, N + 1):
+                    x_1 = x[t - 1][0] + h * (
+                            A[0][0] * x[t - 1][0] + A[0][1] * x[t - 1][1] + B[0][0] * u_value[t - 1][0] + B[0][1] *
+                            u_value[t - 1][1])
+                    x_2 = x[t - 1][1] + h * (
+                            A[1][0] * x[t - 1][0] + A[1][1] * x[t - 1][1] + B[1][0] * u_value[t - 1][0] + B[1][1] *
+                            u_value[t - 1][1])
+                    x[t][0] = x_1
+                    x[t][1] = x_2
+                D1.append(x[-1][0])
+                D2.append(x[-1][1])
+        self.D1 = torch.tensor(D1)
+        self.D2 = torch.tensor(D2)
+
+        def f_x(x):
+            f1 = D1 * x
+            f2 = D2 * x
+            return torch.stack((f1, f2), dim=1)
+
+        def d_x(x):
+            pass

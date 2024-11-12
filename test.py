@@ -20,7 +20,7 @@ def test_model(config, f_x, A, b, x_bar, w_test):
     # 初始化模型并加载已训练好的权重
     primal_net = PrimalNet(
         input_dim=input_dim,
-        hidden_dim=config['hidden_dim'],
+        hidden_dim=config['primal_hidden_dim'],
         output_dim=primal_output_dim,
         x_bar=x_bar,
         A=A,
@@ -29,7 +29,7 @@ def test_model(config, f_x, A, b, x_bar, w_test):
     )
     dual_net = DualNet(
         input_dim=input_dim,
-        hidden_dim=config['hidden_dim'] * 2,
+        hidden_dim=config['dual_hidden_dim'],
         output_dim=dual_output_dim,
         device=config['device']
     )
@@ -80,4 +80,4 @@ def test_model(config, f_x, A, b, x_bar, w_test):
     total_primal_output = np.concatenate(total_primal_output, axis=0)
     total_dual_output = np.concatenate(total_dual_output, axis=0)
 
-    return total_primal_output, total_dual_output
+    return total_primal_output, total_dual_output, primal_net, dual_net

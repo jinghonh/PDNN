@@ -20,7 +20,7 @@ def train_model(config, f_x, A, b, x_bar, w, w_test):
     # 初始化模型
     primal_net = PrimalNet(
         input_dim=input_dim,
-        hidden_dim=config['hidden_dim'],
+        hidden_dim=config['primal_hidden_dim'],
         output_dim=primal_output_dim,
         x_bar=x_bar,
         A=A,
@@ -29,7 +29,7 @@ def train_model(config, f_x, A, b, x_bar, w, w_test):
     )
     dual_net = DualNet(
         input_dim=input_dim,
-        hidden_dim=config['hidden_dim'] * 2,
+        hidden_dim=config['dual_hidden_dim'],
         output_dim=dual_output_dim,
         device=config['device']
     )

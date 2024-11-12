@@ -1,1 +1,4 @@
 *.pth
+*png
+demo.py
+*xlsx

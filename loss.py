@@ -42,8 +42,9 @@ def kkt_loss_function(x, lambda_, weight, problem_config):
     g_values = g_x(x)  # 约束值
     slackness = lambda_ * g_values
     complementary_slackness_loss = torch.norm(slackness, p=2, dim=1) ** 2
+    # g = torch.norm(g_values, p=2, dim=1)
     # eta = torch.mean(kkt_first_order_loss) / torch.mean(complementary_slackness_loss)
-    eta = 10
+    eta = 0.01
     # 一阶条件损失和互补松弛损失的加权和
     total_loss = torch.mean(kkt_first_order_loss + eta * complementary_slackness_loss)
 

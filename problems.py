@@ -93,8 +93,6 @@ class Problem:
             'f_x': f_x,
             'd_x': d_x,
             'g_x': g_x,
-            'A': A.to(self.config['device']),
-            'b': b.to(self.config['device']),
             'w_train': w_train.to(self.config['device']),
             'w_test': w_test.to(self.config['device']),
             'x_bar': x_bar.to(self.config['device']),
@@ -132,13 +130,60 @@ class Problem:
                     x[t][1] = x_2
                 D1.append(x[-1][0])
                 D2.append(x[-1][1])
-        self.D1 = torch.tensor(D1)
-        self.D2 = torch.tensor(D2)
+
+        self.D1 = torch.tensor(D1).to(self.config['device']).reshape(-1, 1)
+        self.D2 = torch.tensor(D2).to(self.config['device']).reshape(-1, 1)
 
         def f_x(x):
-            f1 = D1 * x
-            f2 = D2 * x
-            return torch.stack((f1, f2), dim=1)
+            try:
+                f1 = torch.mm(x, self.D1)
+                f2 = torch.mm(x, self.D2)
+            except:
+                # to cpu
+                f1 = torch.mm(x, self.D1.to('cpu'))
+                f2 = torch.mm(x, self.D2.to('cpu'))
+            return torch.cat((f1, f2), dim=1)
 
         def d_x(x):
             pass
+
+        # def g_x(x):
+        #     x1 = x[:, :self.N]
+        #     x2 = x[:, self.N:]
+        #     g1 = x1**2+x2**2-1
+        #     g2 = x-1
+        #     g3 = -x-1
+        #     return torch.cat((g1, g2, g3), dim=1)
+        def g_x(x):
+
+            x1 = x[:, :self.N]
+            x2 = x[:, self.N:]
+            g1 = x1 ** 2 + x2 ** 2 - 1
+
+            return g1
+
+        x_bar = torch.ones(1, 2 * N) * 0.5
+        n_train = 20
+        w_train = torch.tensor([
+            [i / n_train, 1 - i / n_train] for i in range(n_train + 1)
+        ], dtype=torch.float32)
+        n_test = 20
+        w_test = torch.tensor([
+            [i / n_test, 1 - i / n_test] for i in range(n_test + 1)
+        ], dtype=torch.float32)
+        w_true = w_test
+        # f_true = f_x(w_true)
+
+        return {
+            'f_x': f_x,
+            'd_x': d_x,
+            'g_x': g_x,
+            'w_train': w_train.to(self.config['device']),
+            'w_test': w_test.to(self.config['device']),
+            'x_bar': x_bar.to(self.config['device']),
+            'w_true': w_true.to(self.config['device']),
+            # 'f_true': f_true.to(self.config['device']),
+            'primal_output_dim': 2 * self.N,
+            'dual_output_dim': 1 * self.N,
+            'input_dim': 2
+        }

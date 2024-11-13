@@ -64,10 +64,10 @@ def test_model(config, problem_config):
             pbar.set_postfix(loss=f"{loss.item():.4f}")
             pbar.update(1)
 
-    # 计算平均损失
-    average_loss = total_loss / len(test_loader)
-
-    print(f"Test Average Loss: {average_loss:.4f}")
+    # # 计算平均损失
+    # average_loss = total_loss / len(test_loader)
+    #
+    # print(f"Test Average Loss: {average_loss:.4f}")
 
     # np拼接list
     total_primal_output = np.concatenate(total_primal_output, axis=0)

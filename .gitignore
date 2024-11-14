@@ -2,3 +2,6 @@
 *png
 demo.py
 *xlsx
+cvx/*
+*.xml
+*.pyc

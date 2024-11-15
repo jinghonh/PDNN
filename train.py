@@ -27,7 +27,8 @@ def train_model(config, problem_config):
     )
 
     # 定义优化器
-    optimizer = Adam(list(primal_net.parameters()) + list(dual_net.parameters()), lr=config['learning_rate'])
+    optimizer = Adam(list(primal_net.parameters()) + list(dual_net.parameters()), lr=config['learning_rate'],
+                     weight_decay=1e-4)
     train_loader = generate_data(w)
 
     # 训练循环
@@ -59,7 +60,7 @@ def train_model(config, problem_config):
             pbar.set_postfix(loss=f"{total_loss:.4f}")
             pbar.update(1)
 
-            if epoch < 300 and epoch % 1 == 0:
+            if epoch % 1 == 0:
                 primal_net.eval()
                 plot_primal_net_frontier(problem_config['f_x'], primal_net(problem_config['w_test']).to('cpu'),
                                          problem_config['f_true'], epoch)

@@ -7,7 +7,7 @@ from problems import *
 
 if __name__ == "__main__":
     config = get_config()
-    problems = Problem(5, 100, 100)
+    problems = Problem(5, 32, 32)
     problem_config = problems.problem2()
     f_x = problem_config['f_x']
     # d_x = problem_config['d_x']

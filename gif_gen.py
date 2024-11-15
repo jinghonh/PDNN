@@ -23,9 +23,10 @@ png_files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 # 生成gif动画保存在gif文件夹内
 if not os.path.exists('gif'):
     os.makedirs('gif')
-
+# file name 文件名类似于plot_2024-11-14 23-30-30
+output_file = 'gif/' + png_files[0].split('_')[0] + png_files[0].split('_')[1] + '.gif'
 # 生成的gif动画名称为output.gif
-output_file = 'gif/output.gif'
+
 
 # 生成的gif动画帧率为10
 fps = 10
@@ -58,3 +59,8 @@ with imageio.get_writer(output_file, mode='I', fps=fps, loop=loop) as writer:
         image = imageio.imread(os.path.join('imgs', filename))
         writer.append_data(image)
 print('Gif animation generated successfully!')
+
+# 删除imgs文件夹内的png文件
+for filename in png_files:
+    os.remove(os.path.join('imgs', filename))
+print('png files deleted successfully!')

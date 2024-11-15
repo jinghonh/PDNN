@@ -28,8 +28,8 @@ def test_model(config, problem_config):
     )
 
     # 加载已训练的模型参数
-    primal_net.load_state_dict(torch.load('primal_net.pth', map_location=config['device']))
-    dual_net.load_state_dict(torch.load('dual_net.pth', map_location=config['device']))
+    primal_net.load_state_dict(torch.load('save_model/primal_net.pth', map_location=config['device']))
+    dual_net.load_state_dict(torch.load('save_model/dual_net.pth', map_location=config['device']))
 
     # 将模型放入评估模式
     primal_net.eval()

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 from config import *
 
@@ -29,11 +30,20 @@ def compute_gx(A):
 
 
 class Problem:
-    def __init__(self, N=50):
+    def __init__(self, N=50, n_train=20, n_test=20):
+        self.P = None
         self.D1 = None
         self.D2 = None
         self.N = N
         self.config = get_config()
+
+        self.w_train = torch.tensor([
+            [i / n_train, 1 - i / n_train] for i in range(n_train + 1)
+        ], dtype=torch.float32)
+
+        self.w_test = torch.tensor([
+            [i / n_test, 1 - i / n_test] for i in range(n_test + 1)
+        ], dtype=torch.float32)
 
     def problem1(self):
         def f_x(x: torch.Tensor):
@@ -69,35 +79,30 @@ class Problem:
         def g_x(x, A=A, b=b):
             return torch.mm(A, x.T).T - b
 
-        w_train = torch.tensor([[0, 1],
-                                [1 / 3, 2 / 3],
-                                [2 / 3, 1 / 3],
-                                [1, 0]], dtype=torch.float)
-        n = 50
-        w_test = torch.tensor([
-            [i / n, 1 - i / n] for i in range(n + 1)
-        ], dtype=torch.float32)
+        def x_star(w, N):
+            return torch.where(w[:, 1].unsqueeze(1) <= 0.5, 2 * w[:, 1].unsqueeze(1) * torch.ones((w.size(0), N)),
+                               torch.ones((w.size(0), N)))
+
+
         x_bar = 0.5 * torch.ones(1, self.N, dtype=torch.float)
         n = 1000
         w_true = torch.tensor([
             [i / n, 1 - i / n] for i in range(n + 1)
         ], dtype=torch.float32)
         # if w2>0.5,x=1, else x = 2*[w2,w2]
-        x_true = torch.tensor([
-            [1, 1] if w2 > 0.5 else [2 * w2, 2 * w2] for w2 in w_true[:, 1]
-        ], dtype=torch.float32)
+        x_true = x_true = x_star(w_true, self.N)
 
         f_true = f_x(x_true)
         # f_x, recover_x, A, b, w_train, w_test, x_bar
         return {
+            'problem_name': 'problem1',
             'f_x': f_x,
             'd_x': d_x,
             'g_x': g_x,
-            'w_train': w_train.to(self.config['device']),
-            'w_test': w_test.to(self.config['device']),
+            'w_train': self.w_train.to(self.config['device']),
+            'w_test': self.w_test.to(self.config['device']),
             'x_bar': x_bar.to(self.config['device']),
-            'w_true': w_true.to(self.config['device']),
-            'f_true': f_true.to(self.config['device']),
+            'f_true': f_true.to('cpu').numpy(),
             'primal_output_dim': self.N,
             'dual_output_dim': 2 * self.N,
             'input_dim': 2
@@ -110,8 +115,9 @@ class Problem:
         u_num = 2
         h = (t_f - t_0) / N
         x_init = [0, 0]
-        A = [[0, 1], [-2, -3]]
-        B = [[1, 0], [0, 1]]
+        n = 1
+        A = [[0, 1 * n], [-2 * n, -3 * n]]
+        B = [[1 * n, 0], [0, 1 * n]]
         D1 = []
         D2 = []
         for u_i in range(u_num):
@@ -147,43 +153,78 @@ class Problem:
         def d_x(x):
             pass
 
-        # def g_x(x):
-        #     x1 = x[:, :self.N]
-        #     x2 = x[:, self.N:]
-        #     g1 = x1**2+x2**2-1
-        #     g2 = x-1
-        #     g3 = -x-1
-        #     return torch.cat((g1, g2, g3), dim=1)
         def g_x(x):
 
             x1 = x[:, :self.N]
             x2 = x[:, self.N:]
             g1 = x1 ** 2 + x2 ** 2 - 1
-
+            # g2 = x - 1
+            # g3 = -x - 1
+            # return torch.cat((g1, g2, g3), dim=1)
             return g1
 
-        x_bar = torch.ones(1, 2 * N) * 0.5
-        n_train = 20
-        w_train = torch.tensor([
-            [i / n_train, 1 - i / n_train] for i in range(n_train + 1)
-        ], dtype=torch.float32)
-        n_test = 20
-        w_test = torch.tensor([
-            [i / n_test, 1 - i / n_test] for i in range(n_test + 1)
-        ], dtype=torch.float32)
-        w_true = w_test
-        # f_true = f_x(w_true)
+        x_bar = torch.zeros(1, 2 * N) * 0.5
+        data = pd.read_csv('data/problem2.csv', header=None, sep=' ')
+        f_true = data.to_numpy()
 
         return {
+            "problem_name": "problem2",
             'f_x': f_x,
             'd_x': d_x,
             'g_x': g_x,
-            'w_train': w_train.to(self.config['device']),
-            'w_test': w_test.to(self.config['device']),
+            'w_train': self.w_train.to(self.config['device']),
+            'w_test': self.w_test.to(self.config['device']),
             'x_bar': x_bar.to(self.config['device']),
-            'w_true': w_true.to(self.config['device']),
-            # 'f_true': f_true.to(self.config['device']),
+            'f_true': f_true,
             'primal_output_dim': 2 * self.N,
             'dual_output_dim': 1 * self.N,
             'input_dim': 2
         }
+
+    def problem3(self, P=2):
+        self.P = P
+
+        def f_x(x):
+            # f_{i}(x){:=}(x_{i}-1)^{2}+\sum_{j\neq i}x_{j}^{2}
+            # f1 = (x[:, 0] - 1) ** 2 + torch.sum(x[:, 1:] ** 2, dim=1)
+            # f2 = x[:, 0] ** 2 + (x[:, 1] - 1) ** 2 + torch.sum(x[:, 2:] ** 2, dim=1)
+            # return torch.stack((f1, f2), dim=1)
+            f = torch.zeros(x.shape[0], P).to(x.device)
+            for i in range(P):
+                f[:, i] = (x[:, i] - 1) ** 2 + torch.sum(x[:, [j for j in range(P) if j != i]] ** 2, dim=1)
+            return f
+
+        def d_x(lambda_, weight):
+            # d(\lambda,w){:=}\sum_{i=1}^{P}\left[(w_{i}+\lambda_{i})\,f_{i}\left({\frac{w_{1}+\lambda_{1}}{\sum_{j=1}^{P}[w_{j}+\lambda_{j}]}},\,\cdot\cdot\,,{\frac{w_{P}+\lambda_{P}}{\sum_{j=1}^{P}[w_{j}+\lambda_{j}]}},\,0,\,\cdot\cdot\,,0\right)-\lambda_{i}\right]
+
+            x = torch.zeros_like(weight)
+
+            for i in range(P):
+                x[:, i] = (weight[:, i] + lambda_[:, i]) * f_x(weight[:, i] + lambda_[:, i]) - lambda_[:, i]
+            return x
+
+        def g_x(x):
+            return f_x(x) - 1
+
+        x_bar = torch.ones(1, self.N) / self.N
+
+        return {
+            "problem_name": "problem3",
+            'f_x': f_x,
+            'd_x': d_x,
+            'g_x': g_x,
+            'w_train': self.w_train.to(self.config['device']),
+            'w_test': self.w_test.to(self.config['device']),
+            'x_bar': x_bar.to(self.config['device']),
+            'f_true': None,
+            # 'f_true': f_true.to(self.config['device']),
+            'primal_output_dim': self.N,
+            'dual_output_dim': 2,
+            'input_dim': 2
+        }
+
+
+if __name__ == '__main__':
+    problems = Problem(5, 100, 100)
+    problem_config = problems.problem2()
+    print(problem_config['f_true'])

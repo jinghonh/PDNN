@@ -5,10 +5,10 @@ from dataset import generate_data
 from models import PrimalNet, DualNet
 from loss import kkt_loss_function
 from tqdm import tqdm
+from utils import *
 
 
 def train_model(config, problem_config):
-
     w = problem_config['w_train']
     input_dim = problem_config['input_dim']
 
@@ -59,5 +59,10 @@ def train_model(config, problem_config):
             pbar.set_postfix(loss=f"{total_loss:.4f}")
             pbar.update(1)
 
-    torch.save(primal_net.state_dict(), 'primal_net.pth')
-    torch.save(dual_net.state_dict(), 'dual_net.pth')
+            if epoch < 300 and epoch % 1 == 0:
+                primal_net.eval()
+                plot_primal_net_frontier(problem_config['f_x'], primal_net(problem_config['w_test']).to('cpu'),
+                                         problem_config['f_true'], epoch)
+
+    torch.save(primal_net.state_dict(), 'save_model/primal_net.pth')
+    torch.save(dual_net.state_dict(), 'save_model/dual_net.pth')

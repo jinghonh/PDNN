@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module type="PYTHON_MODULE" version="4">
+<module version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
-    <orderEntry type="inheritedJdk" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/cvx/builtins" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/commands" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/doc" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/examples" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/functions" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/keywords" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/sdpt3" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/sedumi" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/sets" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/shims" />
+      <excludeFolder url="file://$MODULE_DIR$/cvx/structures" />
+    </content>
+    <orderEntry type="jdk" jdkName="pytorch" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

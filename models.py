@@ -19,6 +19,7 @@ class PrimalNet(nn.Module):
         self.layer1 = nn.Linear(input_dim, hidden_dim, device=device)
         self.layer2 = nn.Linear(hidden_dim, hidden_dim, device=device)
         self.layer3 = nn.Linear(hidden_dim, hidden_dim, device=device)
+        # self.layer4 = nn.Linear(hidden_dim, hidden_dim, device=device)
 
         # 输出层，输出维度为决策变量的维度 N
         self.output_layer = nn.Linear(hidden_dim, output_dim, device=device)
@@ -32,6 +33,7 @@ class PrimalNet(nn.Module):
         x = torch.tanh(self.layer1(w))
         x = torch.tanh(self.layer2(x))
         x = torch.tanh(self.layer3(x))
+        # x = torch.tanh(self.layer4(x))
 
         # 输出层使用线性激活函数
         output = self.output_layer(x)
@@ -53,6 +55,7 @@ class DualNet(nn.Module):
         self.layer1 = nn.Linear(input_dim, hidden_dim, device=device)
         self.layer2 = nn.Linear(hidden_dim, hidden_dim, device=device)
         self.layer3 = nn.Linear(hidden_dim, hidden_dim, device=device)
+        # self.layer4 = nn.Linear(hidden_dim, hidden_dim, device=device)
 
         # 输出层，输出维度为对偶变量的维度 M
         self.output_layer = nn.Linear(hidden_dim, output_dim, device=device)
@@ -65,6 +68,7 @@ class DualNet(nn.Module):
         x = torch.tanh(self.layer1(w))
         x = torch.tanh(self.layer2(x))
         x = torch.tanh(self.layer3(x))
+        # x = torch.tanh(self.layer4(x))
 
         # 输出层使用 Softplus 激活函数，以确保输出为非负值
         output = F.softplus(self.output_layer(x))

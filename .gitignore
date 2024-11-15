@@ -1,4 +1,5 @@
 *.pth
+*.idea
 *png
 demo.py
 *xlsx

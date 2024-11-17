@@ -16,6 +16,7 @@ def test_model(config, problem_config):
     primal_net = PrimalNet(
         input_dim=input_dim,
         hidden_dim=config['primal_hidden_dim'],
+        num_layers=config['primal_num_layers'],
         problem_config=problem_config,
         device=config['device']
     )
@@ -23,7 +24,8 @@ def test_model(config, problem_config):
     dual_net = DualNet(
         input_dim=input_dim,
         hidden_dim=config['dual_hidden_dim'],
-        output_dim=problem_config['dual_output_dim'],
+        num_layers=config['dual_num_layers'],
+        problem_config=problem_config,
         device=config['device']
     )
 

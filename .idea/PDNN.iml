@@ -15,7 +15,7 @@
       <excludeFolder url="file://$MODULE_DIR$/cvx/shims" />
       <excludeFolder url="file://$MODULE_DIR$/cvx/structures" />
     </content>
-    <orderEntry type="jdk" jdkName="pytorch" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="F:\anaconda3\envs\pytorch" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

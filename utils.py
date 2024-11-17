@@ -6,7 +6,7 @@ from tqdm import tqdm
 import pandas as pd
 
 
-def plot_primal_net_frontier(f, x, fx_true=None, epoch=None):
+def plot_primal_net_frontier(f, x, fx_true=None, epoch=None, loss=None):
     if fx_true is not None:
         plt.scatter(fx_true[:, 0], fx_true[:, 1], color='r', label="True Frontier")
     fx = f(x)
@@ -15,7 +15,10 @@ def plot_primal_net_frontier(f, x, fx_true=None, epoch=None):
     plt.xlabel("Objective 1")
     plt.ylabel("Objective 2")
     if epoch is not None:
-        plt.title(f"Approximated Weakly Efficient Frontier (Epoch {epoch})")
+        if loss is not None:
+            plt.title(f"Approximated Weakly Efficient Frontier (Epoch {epoch}, Loss: {loss:.4f})")
+        else:
+            plt.title(f"Approximated Weakly Efficient Frontier (Epoch {epoch})")
     else:
         plt.title("Approximated Weakly Efficient Frontier")
     plt.show()

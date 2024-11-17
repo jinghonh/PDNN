@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from config import *
-
+import matlab.engine
 N = 40
 
 
@@ -36,7 +36,8 @@ class Problem:
         self.D2 = None
         self.N = N
         self.config = get_config()
-
+        n_train -= 1
+        n_test -= 1
         self.w_train = torch.tensor([
             [i / n_train, 1 - i / n_train] for i in range(n_train + 1)
         ], dtype=torch.float32)
@@ -46,7 +47,7 @@ class Problem:
         ], dtype=torch.float32)
 
     def problem1(self):
-        def f_x(x: torch.Tensor):
+        def f_x(x):
             f1 = torch.norm(x, p=2, dim=1) ** 2 / self.N
             f2 = torch.norm(x - 2, p=2, dim=1) ** 2 / self.N
             return torch.stack((f1, f2), dim=1)
@@ -157,23 +158,53 @@ class Problem:
 
             x1 = x[:, :self.N]
             x2 = x[:, self.N:]
-            g1 = x1 ** 2 + x2 ** 2 - 1
+            g1 = torch.sqrt(x1 ** 2 + x2 ** 2) - 1
             # g2 = x - 1
             # g3 = -x - 1
             # return torch.cat((g1, g2, g3), dim=1)
             return g1
 
-        x_bar = torch.zeros(1, 2 * N) * 0.5
-        data = pd.read_csv('data/problem2.csv', header=None, sep=' ')
-        f_true = data.to_numpy()
+        def expand_directions(w_train):
+            if not isinstance(w_train, torch.Tensor):
+                raise TypeError("w_train must be a torch.Tensor")
+            if w_train.dim() != 2 or w_train.size(1) != 2:
+                raise ValueError("w_train must have shape (N, 2)")
+
+            # 生成四个方向的张量
+            w_pos = w_train * torch.tensor([1, 1])
+            w_neg = w_train * torch.tensor([-1, -1])
+            w_cross1 = w_train * torch.tensor([1, -1])
+            w_cross2 = w_train * torch.tensor([-1, 1])
+
+            # 沿行方向拼接
+            w_expanded = torch.cat((w_pos, w_neg, w_cross1, w_cross2), dim=0)
+            # w_expanded = torch.cat((w_cross1, w_cross2), dim=0)
+            return w_expanded
+
+        x_bar = torch.ones(1, 2 * N) * 0
+        eng = matlab.engine.connect_matlab()
+        A = matlab.double(A)
+        B = matlab.double(B)
+        T = matlab.double(t_f)
+        N = matlab.double(N)
+        lb = matlab.double([])
+        ub = matlab.double([])
+        data = eng.reachset(A, B, T, N, lb, ub)
+        # data = pd.read_csv('data/problem2.csv', header=None, sep=' ')
+        # f_true = data.to_numpy()
+        f_true = np.array(data)
+
+        w_train = expand_directions(self.w_train)
+        w_test = expand_directions(self.w_test)
+
 
         return {
             "problem_name": "problem2",
             'f_x': f_x,
             'd_x': d_x,
             'g_x': g_x,
-            'w_train': self.w_train.to(self.config['device']),
-            'w_test': self.w_test.to(self.config['device']),
+            'w_train': w_train.to(self.config['device']),
+            'w_test': w_test.to(self.config['device']),
             'x_bar': x_bar.to(self.config['device']),
             'f_true': f_true,
             'primal_output_dim': 2 * self.N,

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import numpy as np
 
 def compute_jacobian(func, x):
     """
@@ -8,6 +8,7 @@ def compute_jacobian(func, x):
     :param x:
     :return jacobian mat:
     """
+
     jacobian = torch.autograd.functional.jacobian(func, x, create_graph=True, vectorize=True)
     return jacobian
 
@@ -52,3 +53,7 @@ def kkt_loss_function(x, lambda_, weight, problem_config):
     mean_loss = torch.mean(total_loss)
 
     return mean_loss
+
+# np.array(torch.stack((kkt_first_order_loss,complementary_slackness_loss),dim=1).cpu().detach())
+# fx = f_x(x)
+# fx = np.array(fx.cpu().detach())

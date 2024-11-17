@@ -19,7 +19,10 @@ png_files = [f for f in png_files if f.endswith('.png')]
 # png_files.sort()
 # 图片名称排序 文件名类似于plot_2024-11-14 23-30-30_02.png，根据最后一个_后的数字排序
 png_files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
-
+# 如果文件夹内没有png文件，则退出
+if len(png_files) == 0:
+    print('No png files found in the imgs folder!')
+    exit()
 # 生成gif动画保存在gif文件夹内
 if not os.path.exists('gif'):
     os.makedirs('gif')

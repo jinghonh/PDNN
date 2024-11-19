@@ -89,7 +89,7 @@ class DualNet(nn.Module):
             x = self.activation(layer(x))
             x = self.dropout(x)
 
-        # 输出层使用 Softplus 激活函数，以确保输出为非负值
+        # 输出层使用 softplus 激活函数，以确保输出为非负值
         output = F.softplus(self.output_layer(x))
         return output
 

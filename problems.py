@@ -6,29 +6,6 @@ import matlab.engine
 N = 40
 
 
-def compute_gx(A):
-    n = A.shape[0]
-    B = torch.zeros_like(A)
-    for i in range(n):
-        A_i = A[i, :]
-        # 检查是否为零向量
-        if torch.norm(A_i) == 0:
-            # 如果是零向量，任意向量都与之正交
-            y = torch.randn_like(A_i)
-        else:
-            # 生成随机向量
-            x = torch.randn_like(A_i)
-            # 计算 x 在 A_i 方向上的投影
-            proj = (A_i @ x) / (A_i @ A_i) * A_i
-            # 得到与 A_i 正交的向量
-            y = x - proj
-            # 可选：将向量归一化
-            y = y / torch.norm(y)
-        # 将结果赋值给 B 的第 i 列
-        B[i, :] = y
-    return B
-
-
 class Problem:
     def __init__(self, N=50, n_train=20, n_test=20):
         self.P = None
@@ -46,7 +23,7 @@ class Problem:
             [i / n_test, 1 - i / n_test] for i in range(n_test + 1)
         ], dtype=torch.float32)
 
-    def problem1(self):
+    def biObjProblem(self):
         def f_x(x):
             f1 = torch.norm(x, p=2, dim=1) ** 2 / self.N
             f2 = torch.norm(x - 2, p=2, dim=1) ** 2 / self.N
@@ -67,8 +44,6 @@ class Problem:
 
             # 计算 x^*
             x_star = 2 * w[:, 1] * torch.ones(N, B) - (N / 2) * A_T_lambda
-
-            # 由于 x^* 可能不满足约束 [0, 1]，需要将其截断到 [0, 1] 范围内
             x_star = torch.clamp(x_star, min=0, max=1)
 
             return f_x(x_star)  # 形状: (N, B)
@@ -91,7 +66,7 @@ class Problem:
             [i / n, 1 - i / n] for i in range(n + 1)
         ], dtype=torch.float32)
         # if w2>0.5,x=1, else x = 2*[w2,w2]
-        x_true = x_true = x_star(w_true, self.N)
+        x_true = x_star(w_true, self.N)
 
         f_true = f_x(x_true)
         # f_x, recover_x, A, b, w_train, w_test, x_bar
@@ -109,7 +84,11 @@ class Problem:
             'input_dim': 2
         }
 
-    def problem2(self):
+    def linearReachableSetProblem(self):
+        """
+        求解线性可达集问题
+        :return: problem_config
+        """
         N = self.N
         t_0 = 0
         t_f = 2
@@ -123,9 +102,9 @@ class Problem:
         D2 = []
         for u_i in range(u_num):
             for u_t in range(0, N):
-                u_value = [[0] * u_num for i in range(N)]
+                u_value = [[0] * u_num for _ in range(N)]
                 u_value[u_t][u_i] = 1
-                x = [x_init] + [[0, 0] for i in range(N)]
+                x = [x_init] + [[0, 0] for _ in range(N)]
                 for t in range(1, N + 1):
                     x_1 = x[t - 1][0] + h * (
                             A[0][0] * x[t - 1][0] + A[0][1] * x[t - 1][1] + B[0][0] * u_value[t - 1][0] + B[0][1] *
@@ -142,26 +121,17 @@ class Problem:
         self.D2 = torch.tensor(D2).to(self.config['device']).reshape(-1, 1)
 
         def f_x(x):
-            try:
-                f1 = torch.mm(x, self.D1)
-                f2 = torch.mm(x, self.D2)
-            except:
-                # to cpu
-                f1 = torch.mm(x, self.D1.to('cpu'))
-                f2 = torch.mm(x, self.D2.to('cpu'))
+            f1 = torch.mm(x, self.D1.to(x.device))
+            f2 = torch.mm(x, self.D2.to(x.device))
             return torch.cat((f1, f2), dim=1)
 
         def d_x(x):
             pass
 
         def g_x(x):
-
             x1 = x[:, :self.N]
             x2 = x[:, self.N:]
             g1 = torch.sqrt(x1 ** 2 + x2 ** 2) - 1
-            # g2 = x - 1
-            # g3 = -x - 1
-            # return torch.cat((g1, g2, g3), dim=1)
             return g1
 
         def expand_directions(w_train):
@@ -182,21 +152,18 @@ class Problem:
             return w_expanded
 
         x_bar = torch.ones(1, 2 * N) * 0
-        eng = matlab.engine.connect_matlab()
-        A = matlab.double(A)
-        B = matlab.double(B)
-        T = matlab.double(t_f)
-        N = matlab.double(N)
-        lb = matlab.double([])
-        ub = matlab.double([])
+        # 在matlab命令行输入matlab.engine.shareEngine并将matlab_code文件夹添加到matlab路径
+        eng = matlab.engine.connect_matlab()  # 连接matlab
+        # 将python数据转换为matlab数据
+        A, B, T, N = map(matlab.double, [A, B, t_f, N])
+        lb, ub = matlab.double([]), matlab.double([])
+        # 调用matlab函数
         data = eng.reachset(A, B, T, N, lb, ub)
         # data = pd.read_csv('data/problem2.csv', header=None, sep=' ')
-        # f_true = data.to_numpy()
         f_true = np.array(data)
 
         w_train = expand_directions(self.w_train)
         w_test = expand_directions(self.w_test)
-
 
         return {
             "problem_name": "problem2",
@@ -212,24 +179,17 @@ class Problem:
             'input_dim': 2
         }
 
-    def problem3(self, P=2):
-        self.P = P
+    def multiObjProblem(self, P=2):
+        self.P = P  # 目标数
 
         def f_x(x):
-            # f_{i}(x){:=}(x_{i}-1)^{2}+\sum_{j\neq i}x_{j}^{2}
-            # f1 = (x[:, 0] - 1) ** 2 + torch.sum(x[:, 1:] ** 2, dim=1)
-            # f2 = x[:, 0] ** 2 + (x[:, 1] - 1) ** 2 + torch.sum(x[:, 2:] ** 2, dim=1)
-            # return torch.stack((f1, f2), dim=1)
             f = torch.zeros(x.shape[0], P).to(x.device)
             for i in range(P):
                 f[:, i] = (x[:, i] - 1) ** 2 + torch.sum(x[:, [j for j in range(P) if j != i]] ** 2, dim=1)
             return f
 
         def d_x(lambda_, weight):
-            # d(\lambda,w){:=}\sum_{i=1}^{P}\left[(w_{i}+\lambda_{i})\,f_{i}\left({\frac{w_{1}+\lambda_{1}}{\sum_{j=1}^{P}[w_{j}+\lambda_{j}]}},\,\cdot\cdot\,,{\frac{w_{P}+\lambda_{P}}{\sum_{j=1}^{P}[w_{j}+\lambda_{j}]}},\,0,\,\cdot\cdot\,,0\right)-\lambda_{i}\right]
-
             x = torch.zeros_like(weight)
-
             for i in range(P):
                 x[:, i] = (weight[:, i] + lambda_[:, i]) * f_x(weight[:, i] + lambda_[:, i]) - lambda_[:, i]
             return x
@@ -255,7 +215,34 @@ class Problem:
         }
 
 
+class gridProblem(Problem):
+    def __init__(self, N=50, n_train=20, n_test=20):
+        super(gridProblem, self).__init__(N, n_train, n_test)
+
+    def gridProblem(self):
+        def f_x(x):
+            f1 = torch.norm(x, p=2, dim=1) ** 2 / self.N
+            f2 = torch.norm(x - 2, p=2, dim=1) ** 2 / self.N
+            return torch.stack((f1, f2), dim=1)
+
+        # 定义对偶函数 d_lambda
+        def d_x(lambda_var, w):
+            # lambda_var: 形状为 (2N, B)，对偶变量
+            # weight: 权重向量，形状为 (2,)
+            lambda_var = lambda_var.T
+            N, B = lambda_var.shape[0] // 2, lambda_var.shape[1]
+
+            # 构建 A^T
+            A_T = torch.cat((torch.eye(N), -torch.eye(N)), dim=1)  # 形状: (N, 2N)
+            A_T_lambda = A_T @ lambda_var  # 形状: (N, B)
+
+            # 计算 x^*
+            x_star = 2 * w[:, 1] * torch.ones(N, B) - (N / 2) * A_T_lambda
+            x_star = torch.clamp(x_star, min=0, max=1)
+
+            return f_x(x_star)  # 形状: (N, B
+
 if __name__ == '__main__':
     problems = Problem(5, 100, 100)
-    problem_config = problems.problem2()
+    problem_config = problems.linearReachableSetProblem()
     print(problem_config['f_true'])

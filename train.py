@@ -1,14 +1,12 @@
-import torch
-from torch import device
 from torch.optim import Adam
+
 from dataset import generate_data
-from models import PrimalNet, DualNet
 from loss import kkt_loss_function
-from tqdm import tqdm
+from models import PrimalNet, DualNet
 from utils import *
 
-def train_model(config, problem_config):
 
+def train_model(config, problem_config):
     input_dim = problem_config['input_dim']
     problem_config['dropout_rate'] = config['dropout_rate']
 

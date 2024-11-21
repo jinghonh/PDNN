@@ -180,12 +180,11 @@ class Problem:
         }
 
     def multiObjProblem(self, P=2):
-        self.P = P  # 目标数
 
         def f_x(x):
             f = torch.zeros(x.shape[0], P).to(x.device)
             for i in range(P):
-                f[:, i] = (x[:, i] - 1) ** 2 + torch.sum(x[:, [j for j in range(P) if j != i]] ** 2, dim=1)
+                f[:, i] = (x[:, i] - 1) ** 2 + torch.sum(x[:, [j for j in range(self.N) if j != i]] ** 2, dim=1)
             return f
 
         def d_x(lambda_, weight):
@@ -197,7 +196,7 @@ class Problem:
         def g_x(x):
             return f_x(x) - 1
 
-        x_bar = torch.ones(1, self.N) / self.N
+        x_bar = torch.cat((torch.ones(1, P) / P, torch.zeros(1, self.N - P)), dim=1).to(self.config['device'])
 
         return {
             "problem_name": "problem3",
@@ -214,33 +213,6 @@ class Problem:
             'input_dim': 2
         }
 
-
-class gridProblem(Problem):
-    def __init__(self, N=50, n_train=20, n_test=20):
-        super(gridProblem, self).__init__(N, n_train, n_test)
-
-    def gridProblem(self):
-        def f_x(x):
-            f1 = torch.norm(x, p=2, dim=1) ** 2 / self.N
-            f2 = torch.norm(x - 2, p=2, dim=1) ** 2 / self.N
-            return torch.stack((f1, f2), dim=1)
-
-        # 定义对偶函数 d_lambda
-        def d_x(lambda_var, w):
-            # lambda_var: 形状为 (2N, B)，对偶变量
-            # weight: 权重向量，形状为 (2,)
-            lambda_var = lambda_var.T
-            N, B = lambda_var.shape[0] // 2, lambda_var.shape[1]
-
-            # 构建 A^T
-            A_T = torch.cat((torch.eye(N), -torch.eye(N)), dim=1)  # 形状: (N, 2N)
-            A_T_lambda = A_T @ lambda_var  # 形状: (N, B)
-
-            # 计算 x^*
-            x_star = 2 * w[:, 1] * torch.ones(N, B) - (N / 2) * A_T_lambda
-            x_star = torch.clamp(x_star, min=0, max=1)
-
-            return f_x(x_star)  # 形状: (N, B
 
 if __name__ == '__main__':
     problems = Problem(5, 100, 100)

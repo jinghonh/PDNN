@@ -10,7 +10,7 @@ import warnings
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     config = get_config()
-    problems = Problem(5, 100, 200)
+    problems = Problem(10, 50, 200)
     problem_config = problems.linearReachableSetProblem()
     f_x = problem_config['f_x']
     # d_x = problem_config['d_x']

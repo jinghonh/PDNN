@@ -105,7 +105,7 @@ class FeasibleOutputLayer(nn.Module):
         super(FeasibleOutputLayer, self).__init__()
         self.x_bar = x_bar
         self.g_x_bar = self.g_x(x_bar)  # size: 1 x M
-        self.e = 5e-5  # 避免除以零
+        self.e = 2e-4  # 避免除以零
         # self.e = 2e-4
 
     def forward(self, z):
